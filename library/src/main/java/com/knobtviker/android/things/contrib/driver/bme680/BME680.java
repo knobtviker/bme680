@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -106,6 +107,25 @@ public class BME680 implements AutoCloseable {
 
     public static final int DISABLE_GAS = 0;
     public static final int ENABLE_GAS = 1;
+
+    /**
+     * Gas heater profile.
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({PROFILE_0, PROFILE_1, PROFILE_2, PROFILE_3, PROFILE_4, PROFILE_5, PROFILE_6, PROFILE_7, PROFILE_8, PROFILE_9})
+    public @interface HeaterProfile {
+    }
+
+    public static final int PROFILE_0 = 0;
+    public static final int PROFILE_1 = 1;
+    public static final int PROFILE_2 = 2;
+    public static final int PROFILE_3 = 3;
+    public static final int PROFILE_4 = 4;
+    public static final int PROFILE_5 = 5;
+    public static final int PROFILE_6 = 6;
+    public static final int PROFILE_7 = 7;
+    public static final int PROFILE_8 = 8;
+    public static final int PROFILE_9 = 9;
 
     // Registers
     private static final int BME680_REG_ID = 0xD0;
@@ -261,7 +281,7 @@ public class BME680 implements AutoCloseable {
     public BME680(@NonNull final String bus, final int address) throws IOException {
         final PeripheralManagerService pioService = new PeripheralManagerService();
         final I2cDevice device = pioService.openI2cDevice(bus, address);
-        sensorSettings= new SensorSettings();
+        sensorSettings = new SensorSettings();
         gasSettings = new GasSettings();
         try {
             connect(device);
@@ -529,13 +549,22 @@ public class BME680 implements AutoCloseable {
         return (mDevice.readRegByte(BME680_CONF_ODR_FILT_ADDR) & BME680_FILTER_MSK) >> FILTER_POS;
     }
 
-//    // Set current gas sensor conversion profile: 0 to 9. Select one of the 10 configured heating durations/set points.
-    private void selectGasHeaterProfile(final int value) {
-//        if value > NBCONV_MAX or value < NBCONV_MIN:
-//    raise ValueError("Profile '{}' should be between {} and {}".format(value, NBCONV_MIN, NBCONV_MAX))
-//
-//    self.gas_settings.nb_conv = value
-//      self._set_bits(CONF_ODR_RUN_GAS_NBC_ADDR, NBCONV_MSK, NBCONV_POS, value)
+    // Set current gas sensor conversion profile: 0 to 9. Select one of the 10 configured heating durations/set points.
+    @SuppressWarnings("PointlessBitwiseExpression")
+    private void selectGasHeaterProfile(@HeaterProfile final int value) throws IOException {
+        if (mDevice == null) {
+            throw new IllegalStateException("I2C device not open");
+        }
+        if (value > PROFILE_9 || value < PROFILE_0) {
+            throw new IllegalStateException(String.format(Locale.getDefault(), "Profile '%d should be between %d and %d", value, PROFILE_0, PROFILE_9));
+        }
+
+        int regCtrl = mDevice.readRegByte(BME680_CONF_ODR_RUN_GAS_NBC_ADDR) & 0xff;
+        regCtrl &= ~BME680_NBCONV_MSK;
+        regCtrl |= value << NBCONV_POS;
+        mDevice.writeRegByte(BME680_CONF_ODR_RUN_GAS_NBC_ADDR, (byte) (regCtrl));
+
+        gasSettings.nbConversion = value;
     }
 
     // Get gas sensor conversion profile: 0 to 9
@@ -546,6 +575,17 @@ public class BME680 implements AutoCloseable {
 
         return mDevice.readRegByte(BME680_CONF_ODR_RUN_GAS_NBC_ADDR) & BME680_NBCONV_MSK;
     }
+
+//    private void setGasHeaterProfile(temperature, duration, nb_profile=0) {
+//        "" "Set temperature and duration of gas sensor heater
+//
+//        :param temperature:Target temperature in degrees celsius, between 200 and 400
+//        :param durarion:Target duration in milliseconds, between 1 and 4032
+//        :param nb_profile:Target profile, between 0 and 9
+//        "" "
+//        self.set_gas_heater_temperature(temperature, nb_profile = nb_profile)
+//        self.set_gas_heater_duration(duration, nb_profile = nb_profile)
+//    }
 
     // Enable/disable gas sensor
     private void setGasStatus(@GasMeasure final int value) throws IOException {
