@@ -28,10 +28,16 @@ public class BME680 implements AutoCloseable {
      * Chip ID for the BME680
      */
     public static final int CHIP_ID_BME680 = 0x61;
+
     /**
      * Default I2C address for the sensor.
      */
     public static final int DEFAULT_I2C_ADDRESS = 0x76;
+
+    /**
+     * Alternative I2C address for the sensor.
+     */
+    public static final int ALTERNATIVE_I2C_ADDRESS = 0x77;
 
     @Deprecated
     public static final int I2C_ADDRESS = DEFAULT_I2C_ADDRESS;
@@ -364,6 +370,7 @@ public class BME680 implements AutoCloseable {
     }
 
     // Set power mode
+    @SuppressWarnings("PointlessBitwiseExpression")
     private void setPowerMode(@Mode final int mode) throws IOException {
         if (mDevice == null) {
             throw new IllegalStateException("I2C device not open");
@@ -443,6 +450,7 @@ public class BME680 implements AutoCloseable {
     // A higher oversampling value means more stable sensor readings, with less noise and jitter.
     // However each step of oversampling adds about 2ms to the latency,
     // causing a slower response time to fast transients.
+    @SuppressWarnings("PointlessBitwiseExpression")
     private void setHumidityOversample(@Oversampling final int value) throws IOException {
         if (mDevice == null) {
             throw new IllegalStateException("I2C device not open");
@@ -457,6 +465,7 @@ public class BME680 implements AutoCloseable {
     }
 
     //  Get humidity oversampling
+    @SuppressWarnings("PointlessBitwiseExpression")
     private int getHumidityOversample() throws IOException {
         if (mDevice == null) {
             throw new IllegalStateException("I2C device not open");
@@ -539,7 +548,7 @@ public class BME680 implements AutoCloseable {
     }
 
     // Enable/disable gas sensor
-    private void setGasStatus(final int value) throws IOException {
+    private void setGasStatus(@GasMeasure final int value) throws IOException {
         if (mDevice == null) {
             throw new IllegalStateException("I2C device not open");
         }
@@ -622,6 +631,7 @@ public class BME680 implements AutoCloseable {
         return ((((var2 + var3) * 5) + 128) >> 8);
     }
 
+    @SuppressWarnings({"ConstantConditions", "NumericOverflow"})
     private int compensatePressure(final int pressure, final int temperature) {
         int var1 = ((temperature) >> 1) - 64000;
         int var2 = ((((var1 >> 2) * (var1 >> 2)) >> 11) * mPressureCalibrationData[5]) >> 2;
@@ -649,6 +659,7 @@ public class BME680 implements AutoCloseable {
         return calculatedPressure;
     }
 
+    @SuppressWarnings("PointlessArithmeticExpression")
     private int compensateHumidity(final int humidity, final int temperature) {
         final int temp_scaled = ((temperature * 5) + 128) >> 8;
         final int var1 = (humidity - ((mHumidityCalibrationData[0] * 16))) - (((temp_scaled * mHumidityCalibrationData[2]) / (100)) >> 1);
@@ -698,47 +709,5 @@ public class BME680 implements AutoCloseable {
         }
 
         return newDuration;
-    }
-
-    public class SensorSettings {
-        /*! Humidity oversampling */
-        public int oversamplingHumidity;
-        /*! Temperature oversampling */
-        public int oversamplingTemperature;
-        /*! Pressure oversampling */
-        public int oversamplingPressure;
-        /*! Filter coefficient */
-        public int filter;
-    }
-
-    public class GasSettings {
-        /*! Variable to store nb conversion */
-        public int nbConversion;
-        /*! Variable to store heater control */
-        public int heaterControl;
-        /*! Run gas enable value */
-        public int runGas;
-        /*! Pointer to store heater temperature */
-        public int heaterTemperature;
-        /*! Pointer to store duration profile */
-        public int heaterDuration;
-    }
-
-    public class Data {
-        // Contains new_data, gasm_valid & heat_stab
-        public int status = -1;
-        public boolean heat_stable = false;
-        // The index of the heater profile used
-        public int gas_index = -1;
-        // Measurement index to track order
-        public int meas_index = -1;
-        // Temperature in degree celsius x100
-        public int temperature = -1;
-        // Pressure in Pascal
-        public int pressure = -1;
-        // Humidity in % relative humidity x1000
-        public int humidity = -1;
-        // Gas resistance in Ohms
-        public int gas_resistance = -1;
     }
 }
