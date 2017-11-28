@@ -9,13 +9,13 @@ public class Data {
     // Contains new_data, gasm_valid & heat_stab
     public int status = -1;
 
-    public boolean heat_stable = false;
+    public boolean heaterStable = false;
 
     // The index of the heater profile used
-    public int gas_index = -1;
+    public int gasIndex = -1;
 
     // Measurement index to track order
-    public int meas_index = -1;
+    public int measureIndex = -1;
 
     // Temperature in degree celsius x100
     public int temperature = -1;
@@ -27,5 +27,5 @@ public class Data {
     public int humidity = -1;
 
     // Gas resistance in Ohms
-    public int gas_resistance = -1;
+    public int gasResistance = -1;
 }
