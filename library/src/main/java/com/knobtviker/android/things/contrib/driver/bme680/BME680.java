@@ -43,6 +43,53 @@ public class BME680 implements AutoCloseable {
     @Deprecated
     public static final int I2C_ADDRESS = DEFAULT_I2C_ADDRESS;
 
+    //TODO: Fix this fake data from BME280
+    // Sensor constants from the datasheet.
+    /**
+     * Mininum temperature in Celsius the sensor can measure.
+     */
+    public static final float MIN_TEMP_C = -40f;
+    /**
+     * Maximum temperature in Celsius the sensor can measure.
+     */
+    public static final float MAX_TEMP_C = 85f;
+    /**
+     * Minimum pressure in hPa the sensor can measure.
+     */
+    public static final float MIN_PRESSURE_HPA = 300f;
+    /**
+     * Maximum pressure in hPa the sensor can measure.
+     */
+    public static final float MAX_PRESSURE_HPA = 1100f;
+    /**
+     * Minimum humidity in percentage the sensor can measure.
+     */
+    public static final float MIN_HUMIDITY_PERCENT = 0f;
+    /**
+     * Maximum humidity in percentage the sensor can measure.
+     */
+    public static final float MAX_HUMIDITY_PERCENT = 100f;
+    /**
+     * Maximum power consumption in micro-amperes when measuring temperature.
+     */
+    public static final float MAX_POWER_CONSUMPTION_TEMP_UA = 325f;
+    /**
+     * Maximum power consumption in micro-amperes when measuring pressure.
+     */
+    public static final float MAX_POWER_CONSUMPTION_PRESSURE_UA = 720f;
+    /**
+     * Maximum power consumption in micro-amperes when measuring pressure.
+     */
+    public static final float MAX_POWER_CONSUMPTION_HUMIDITY_UA = 340f;
+    /**
+     * Maximum frequency of the measurements.
+     */
+    public static final float MAX_FREQ_HZ = 181f;
+    /**
+     * Minimum frequency of the measurements.
+     */
+    public static final float MIN_FREQ_HZ = 23.1f;
+
     /**
      * Power mode.
      */
