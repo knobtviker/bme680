@@ -14,17 +14,17 @@ import java.util.UUID;
  * Created by bojan on 10/07/2017.
  */
 
-public class BME680SensorDriver implements AutoCloseable {
-    private static final String TAG = BME680SensorDriver.class.getSimpleName();
+public class Bme680SensorDriver implements AutoCloseable {
+    private static final String TAG = Bme680SensorDriver.class.getSimpleName();
 
-    private BME680 mDevice;
+    private Bme680 mDevice;
 
     // DRIVER parameters
     // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
     private static final String DRIVER_VENDOR = "Bosch";
     private static final String DRIVER_NAME = "BME680";
-    private static final int DRIVER_MIN_DELAY_US = Math.round(1000000.f / BME680.MAX_FREQ_HZ);
-    private static final int DRIVER_MAX_DELAY_US = Math.round(1000000.f / BME680.MIN_FREQ_HZ);
+    private static final int DRIVER_MIN_DELAY_US = Math.round(1000000.f / Bme680.MAX_FREQ_HZ);
+    private static final int DRIVER_MAX_DELAY_US = Math.round(1000000.f / Bme680.MIN_FREQ_HZ);
 
     private TemperatureUserDriver mTemperatureUserDriver;
     private PressureUserDriver mPressureUserDriver;
@@ -39,8 +39,8 @@ public class BME680SensorDriver implements AutoCloseable {
      * @see #registerPressureSensor()
      * @see #registerTemperatureSensor()
      */
-    public BME680SensorDriver(String bus) throws IOException {
-        mDevice = new BME680(bus);
+    public Bme680SensorDriver(String bus) throws IOException {
+        mDevice = new Bme680(bus);
     }
 
     /**
@@ -53,8 +53,8 @@ public class BME680SensorDriver implements AutoCloseable {
      * @see #registerPressureSensor()
      * @see #registerTemperatureSensor()
      */
-    public BME680SensorDriver(String bus, int address) throws IOException {
-        mDevice = new BME680(bus, address);
+    public Bme680SensorDriver(String bus, int address) throws IOException {
+        mDevice = new Bme680(bus, address);
     }
 
     /**
@@ -154,18 +154,18 @@ public class BME680SensorDriver implements AutoCloseable {
         if ((mTemperatureUserDriver == null || !mTemperatureUserDriver.isEnabled())
             && (mPressureUserDriver == null || !mPressureUserDriver.isEnabled())
             && (mHumidityUserDriver == null || !mHumidityUserDriver.isEnabled())) {
-            mDevice.setPowerMode(BME680.MODE_SLEEP);
+            mDevice.setPowerMode(Bme680.MODE_SLEEP);
         } else {
-            mDevice.setPowerMode(BME680.MODE_FORCED);
+            mDevice.setPowerMode(Bme680.MODE_FORCED);
         }
     }
 
     private class PressureUserDriver extends UserSensorDriver {
         // DRIVER parameters
         // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
-        private static final float DRIVER_MAX_RANGE = BME680.MAX_PRESSURE_HPA;
+        private static final float DRIVER_MAX_RANGE = Bme680.MAX_PRESSURE_HPA;
         private static final float DRIVER_RESOLUTION = 0.0262f;
-        private static final float DRIVER_POWER = BME680.MAX_POWER_CONSUMPTION_PRESSURE_UA / 1000.f;
+        private static final float DRIVER_POWER = Bme680.MAX_POWER_CONSUMPTION_PRESSURE_UA / 1000.f;
         private static final int DRIVER_VERSION = 1;
         private static final String DRIVER_REQUIRED_PERMISSION = "";
 
@@ -200,7 +200,7 @@ public class BME680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setPressureOversample(enabled ? BME680.OVERSAMPLING_1X : BME680.OVERSAMPLING_SKIPPED);
+            mDevice.setPressureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -212,9 +212,9 @@ public class BME680SensorDriver implements AutoCloseable {
     private class TemperatureUserDriver extends UserSensorDriver {
         // DRIVER parameters
         // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
-        private static final float DRIVER_MAX_RANGE = BME680.MAX_TEMP_C;
+        private static final float DRIVER_MAX_RANGE = Bme680.MAX_TEMP_C;
         private static final float DRIVER_RESOLUTION = 0.005f;
-        private static final float DRIVER_POWER = BME680.MAX_POWER_CONSUMPTION_TEMP_UA / 1000.f;
+        private static final float DRIVER_POWER = Bme680.MAX_POWER_CONSUMPTION_TEMP_UA / 1000.f;
         private static final int DRIVER_VERSION = 1;
         private static final String DRIVER_REQUIRED_PERMISSION = "";
 
@@ -249,7 +249,7 @@ public class BME680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setTemperatureOversample(enabled ? BME680.OVERSAMPLING_1X : BME680.OVERSAMPLING_SKIPPED);
+            mDevice.setTemperatureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -261,9 +261,9 @@ public class BME680SensorDriver implements AutoCloseable {
     private class HumidityUserDriver extends UserSensorDriver {
         // DRIVER parameters
         // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
-        private static final float DRIVER_MAX_RANGE = BME680.MAX_HUMIDITY_PERCENT;
+        private static final float DRIVER_MAX_RANGE = Bme680.MAX_HUMIDITY_PERCENT;
         private static final float DRIVER_RESOLUTION = 0.00008f; //0.008f;
-        private static final float DRIVER_POWER = BME680.MAX_POWER_CONSUMPTION_HUMIDITY_UA / 1000.f;
+        private static final float DRIVER_POWER = Bme680.MAX_POWER_CONSUMPTION_HUMIDITY_UA / 1000.f;
         private static final int DRIVER_VERSION = 1;
         private static final String DRIVER_REQUIRED_PERMISSION = "";
 
@@ -298,7 +298,61 @@ public class BME680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setHumidityOversample(enabled ? BME680.OVERSAMPLING_1X : BME680.OVERSAMPLING_SKIPPED);
+            mDevice.setHumidityOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
+            maybeSleep();
+        }
+
+        private boolean isEnabled() {
+            return mEnabled;
+        }
+    }
+
+    private class GasUserDriver extends UserSensorDriver {
+        // DRIVER parameters
+        // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
+        private static final float DRIVER_MAX_RANGE = Bme680.MAX_GAS_PERCENT;
+        private static final float DRIVER_RESOLUTION = 0.008f; //0.008f;
+        private static final float DRIVER_POWER = Bme680.MAX_POWER_CONSUMPTION_GAS_UA / 1000.f;
+        private static final int DRIVER_VERSION = 1;
+        private static final String DRIVER_REQUIRED_PERMISSION = "";
+
+        private boolean mEnabled;
+        private UserSensor mUserSensor;
+
+        private UserSensor getUserSensor() {
+            if (mUserSensor == null) {
+                mUserSensor = new UserSensor.Builder()
+                    .setType(Sensor.TYPE_RELATIVE_HUMIDITY)
+                    .setCustomType(Sensor.TYPE_DEVICE_PRIVATE_BASE, String.format("%s.%s.gas", DRIVER_VENDOR, DRIVER_NAME), Sensor.REPORTING_MODE_ON_CHANGE)
+                    .setName(DRIVER_NAME)
+                    .setVendor(DRIVER_VENDOR)
+                    .setVersion(DRIVER_VERSION)
+                    .setMaxRange(DRIVER_MAX_RANGE)
+                    .setResolution(DRIVER_RESOLUTION)
+                    .setPower(DRIVER_POWER)
+                    .setMinDelay(DRIVER_MIN_DELAY_US)
+                    .setRequiredPermission(DRIVER_REQUIRED_PERMISSION)
+                    .setMaxDelay(DRIVER_MAX_DELAY_US)
+                    .setUuid(UUID.randomUUID())
+                    .setDriver(this)
+                    .build();
+            }
+            return mUserSensor;
+        }
+
+        @Override
+        public UserSensorReading read() throws IOException {
+            return new UserSensorReading(new float[]{mDevice.getSensorData().measureIndex});
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) throws IOException {
+            mEnabled = enabled;
+            mDevice.setGasStatus(enabled ? Bme680.ENABLE_GAS: Bme680.DISABLE_GAS);
+            if (enabled) {
+                mDevice.setGasHeaterProfile(Bme680.PROFILE_0, 320, 120);
+                mDevice.selectGasHeaterProfile(Bme680.PROFILE_0);
+            }
             maybeSleep();
         }
 

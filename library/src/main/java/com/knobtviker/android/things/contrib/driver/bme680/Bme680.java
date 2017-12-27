@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
  * Driver for the Bosch BME 680 sensor.
  */
 @SuppressWarnings({"unused", "WeakerAccess", "FieldCanBeLocal"})
-public class BME680 implements AutoCloseable {
-    private static final String TAG = BME680.class.getSimpleName();
+public class Bme680 implements AutoCloseable {
+    private static final String TAG = Bme680.class.getSimpleName();
 
     /**
      * Chip ID for the BME680
@@ -43,7 +43,6 @@ public class BME680 implements AutoCloseable {
     @Deprecated
     public static final int I2C_ADDRESS = DEFAULT_I2C_ADDRESS;
 
-    //TODO: Fix this fake data from BME280
     // Sensor constants from the datasheet.
     /**
      * Mininum temperature in Celsius the sensor can measure.
@@ -70,17 +69,30 @@ public class BME680 implements AutoCloseable {
      */
     public static final float MAX_HUMIDITY_PERCENT = 100f;
     /**
+     * Minimum humidity in percentage the sensor can measure.
+     */
+    public static final float MIN_GAS_PERCENT = 10f;
+    /**
+     * Maximum humidity in percentage the sensor can measure.
+     */
+    public static final float MAX_GAS_PERCENT = 95f;
+    /**
      * Maximum power consumption in micro-amperes when measuring temperature.
      */
-    public static final float MAX_POWER_CONSUMPTION_TEMP_UA = 325f;
+    public static final float MAX_POWER_CONSUMPTION_TEMP_UA = 350f;
     /**
      * Maximum power consumption in micro-amperes when measuring pressure.
      */
-    public static final float MAX_POWER_CONSUMPTION_PRESSURE_UA = 720f;
+    public static final float MAX_POWER_CONSUMPTION_PRESSURE_UA = 849f; //714f
     /**
      * Maximum power consumption in micro-amperes when measuring pressure.
      */
-    public static final float MAX_POWER_CONSUMPTION_HUMIDITY_UA = 340f;
+    public static final float MAX_POWER_CONSUMPTION_HUMIDITY_UA = 450f; //340f
+    /**
+     * Maximum power consumption in micro-amperes when measuring volatile gases.
+     */
+    public static final float MAX_POWER_CONSUMPTION_GAS_UA = 13f; //340f
+    //TODO: Fix this fake data from BME280
     /**
      * Maximum frequency of the measurements.
      */
@@ -321,7 +333,7 @@ public class BME680 implements AutoCloseable {
      * @param bus I2C bus the sensor is connected to.
      * @throws IOException
      */
-    public BME680(@NonNull final String bus) throws IOException {
+    public Bme680(@NonNull final String bus) throws IOException {
         this(bus, DEFAULT_I2C_ADDRESS);
     }
 
@@ -332,7 +344,7 @@ public class BME680 implements AutoCloseable {
      * @param address I2C address of the sensor.
      * @throws IOException
      */
-    public BME680(@NonNull final String bus, final int address) throws IOException {
+    public Bme680(@NonNull final String bus, final int address) throws IOException {
         final PeripheralManagerService pioService = new PeripheralManagerService();
         final I2cDevice device = pioService.openI2cDevice(bus, address);
         sensorSettings = new SensorSettings();
@@ -354,7 +366,7 @@ public class BME680 implements AutoCloseable {
      * @param device I2C device of the sensor.
      * @throws IOException
      */
-    /*package*/  BME680(I2cDevice device) throws IOException {
+    /*package*/  Bme680(I2cDevice device) throws IOException {
         sensorSettings = new SensorSettings();
         gasSettings = new GasSettings();
         connect(device);
