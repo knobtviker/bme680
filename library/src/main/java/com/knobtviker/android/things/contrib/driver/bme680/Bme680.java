@@ -26,6 +26,21 @@ public class Bme680 implements AutoCloseable {
     private static final String TAG = Bme680.class.getSimpleName();
 
     /**
+     * Chip vendor for the BME680
+     */
+    public static final String CHIP_VENDOR = "Bosch";
+
+    /**
+     * Chip name for the BME680
+     */
+    public static final String CHIP_NAME = "BME680";
+
+    /**
+     * Chip sensor type for the BME680 indoor air quality sensor
+     */
+    public static final String CHIP_SENSOR_TYPE_IAQ = "android.sensor.indoor_air_quality";
+
+    /**
      * Chip ID for the BME680
      */
     public static final int CHIP_ID_BME680 = 0x61;
@@ -315,6 +330,7 @@ public class Bme680 implements AutoCloseable {
     };
 
     private int DATA_READ_ATTEMPTS = 10;
+    private int DATA_GAS_BURN_IN = 50;
 
     private boolean enabled = false;
     private int chipId;
@@ -323,8 +339,9 @@ public class Bme680 implements AutoCloseable {
     private GasSettings gasSettings;
     private SensorSettings sensorSettings;
     private Data data;
+    private int[] gasResistanceData = new int[DATA_GAS_BURN_IN];
     private int ambientTemperature;
-    private int temperatureFine;
+    private float lastAirQuality = 0.0f;
 
     /**
      * Create a new BME680 sensor driver connected on the given bus.
@@ -388,6 +405,8 @@ public class Bme680 implements AutoCloseable {
         sensorSettings = new SensorSettings();
         gasSettings = new GasSettings();
         data = new Data();
+
+        fillGasDataResistance();
 
         this.device = device;
 
@@ -751,6 +770,8 @@ public class Bme680 implements AutoCloseable {
             final int gas_resistance = (short) ((int) buffer[13] * 4 | (((int) buffer[14]) / 64));
             final int gas_range = buffer[14] & BME680_GAS_RANGE_MASK;
 
+            ambientTemperature = temperature;
+
             data.status |= buffer[14] & BME680_GASM_VALID_MASK;
             data.status |= buffer[14] & BME680_HEAT_STABLE_MASK;
 
@@ -760,7 +781,9 @@ public class Bme680 implements AutoCloseable {
             data.pressure = compensatePressure(pressure, temperature);
             data.humidity = compensateHumidity(humidity, temperature) / 1000.0f;
             data.gasResistance = compensateGasResistance(gas_resistance, gas_range);
-            ambientTemperature = temperature;
+            final float airQuality = calculateAirQuality(gas_resistance, data.humidity);
+            data.airQualityScore = airQuality == 0.0f ? lastAirQuality : airQuality;
+            lastAirQuality = airQuality;
 
             this.data = data;
 
@@ -779,7 +802,7 @@ public class Bme680 implements AutoCloseable {
         long var2 = (var1 * calibration.temperature[1]) >> 11;
         long var3 = ((var1 >> 1) * (var1 >> 1)) >> 12;
         var3 = ((var3) * (calibration.temperature[2] << 4)) >> 14;
-        temperatureFine = (int) (var2 + var3);
+        int temperatureFine = (int) (var2 + var3);
         return (short) (((temperatureFine * 5) + 128) >> 8);
     }
 
@@ -834,6 +857,52 @@ public class Bme680 implements AutoCloseable {
         return (int) ((var3 + (var2 >> 1)) / var2);
     }
 
+
+    private float calculateAirQuality(final int gasResistance, final float humidity) {
+        // Set the humidity baseline to 40%, an optimal indoor humidity.
+        final float humidityBaseline = 40.0f;
+        // This sets the balance between humidity and gas reading in the calculation of airQualityScore (25:75, humidity:gas)
+        final float humidityWeighting = 0.25f;
+
+        //Collect gas resistance burn-in values, then use the average of the last n values to set the upper limit for calculating gasBaseline.
+        if (gasResistanceData[DATA_GAS_BURN_IN - 1] != 0) {
+            final int gasBaseline = sumGasDataResistance();
+
+            final int gasOffset = gasBaseline - gasResistance;
+
+            final float humidityOffset = humidity - humidityBaseline;
+
+            // Calculate humidityScore as the distance from the humidityBaseline
+            final float humidityScore;
+            if (humidityOffset > 0) {
+                humidityScore = (100.0f - humidityBaseline - humidityOffset) / (100.0f - humidityBaseline) * (humidityWeighting * 100.0f);
+            } else {
+                humidityScore = (humidityBaseline + humidityOffset) / humidityBaseline * (humidityWeighting * 100.0f);
+            }
+
+            // Calculate gasScore as the distance from the gasBaseline
+            final float gasScore;
+            if (gasOffset > 0) {
+                gasScore = (gasResistance / gasBaseline) * (100.0f - (humidityWeighting * 100.0f));
+            } else {
+                gasScore = 100.0f - (humidityWeighting * 100.0f);
+            }
+
+            fillGasDataResistance();
+
+            return humidityScore + gasScore;
+        } else {
+            for (int i = 0; i < DATA_GAS_BURN_IN; i++) {
+                if (gasResistanceData[i] == 0) {
+                    gasResistanceData[i] = gasResistance;
+                    break;
+                }
+            }
+
+            return 0.0f;
+        }
+    }
+
     private int calculateHeaterResistance(final int temperature) {
         final int normalizedTemperature = Math.min(Math.max(temperature, 200), 400);
 
@@ -861,5 +930,20 @@ public class Bme680 implements AutoCloseable {
         }
 
         return newDuration;
+    }
+
+    private void fillGasDataResistance() {
+        for (int i = 0; i < DATA_GAS_BURN_IN; i++) {
+            gasResistanceData[i] = 0;
+        }
+    }
+
+    private int sumGasDataResistance() {
+        int sum = 0;
+        for (int i = 0; i < DATA_GAS_BURN_IN; i++) {
+            sum += gasResistanceData[i];
+        }
+
+        return sum;
     }
 }

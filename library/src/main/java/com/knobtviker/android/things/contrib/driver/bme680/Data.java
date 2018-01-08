@@ -29,4 +29,6 @@ public class Data {
     // Gas resistance in Ohms
     public int gasResistance = -1;
 
+    // Indoor air quality score index
+    public float airQualityScore;
 }

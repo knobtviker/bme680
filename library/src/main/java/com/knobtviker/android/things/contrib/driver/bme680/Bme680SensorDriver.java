@@ -17,18 +17,22 @@ import java.util.UUID;
 public class Bme680SensorDriver implements AutoCloseable {
     private static final String TAG = Bme680SensorDriver.class.getSimpleName();
 
+    public static final int INDOOR_AIR_QUALITY_GAS_RESISTANCE = 0;
+    public static final int INDOOR_AIR_QUALITY_INDEX = 1;
+
     private Bme680 mDevice;
 
     // DRIVER parameters
     // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
-    private static final String DRIVER_VENDOR = "Bosch";
-    private static final String DRIVER_NAME = "BME680";
+    private static final String DRIVER_VENDOR = Bme680.CHIP_VENDOR;
+    private static final String DRIVER_NAME = Bme680.CHIP_NAME;
     private static final int DRIVER_MIN_DELAY_US = Math.round(1000000.f / Bme680.MAX_FREQ_HZ);
     private static final int DRIVER_MAX_DELAY_US = Math.round(1000000.f / Bme680.MIN_FREQ_HZ);
 
     private TemperatureUserDriver mTemperatureUserDriver;
     private PressureUserDriver mPressureUserDriver;
     private HumidityUserDriver mHumidityUserDriver;
+    private GasUserDriver mGasUserDriver;
 
     /**
      * Create a new framework sensor driver connected on the given bus.
@@ -121,6 +125,21 @@ public class Bme680SensorDriver implements AutoCloseable {
     }
 
     /**
+     * Register a {@link UserSensor} that pipes indoor air quality readings into the Android SensorManager.
+     * @see #unregisterGasSensor()
+     */
+    public void registerGasSensor() {
+        if (mDevice == null) {
+            throw new IllegalStateException("cannot register closed driver");
+        }
+
+        if (mGasUserDriver == null) {
+            mGasUserDriver = new GasUserDriver();
+            UserDriverManager.getManager().registerSensor(mGasUserDriver.getUserSensor());
+        }
+    }
+
+    /**
      * Unregister the temperature {@link UserSensor}.
      */
     public void unregisterTemperatureSensor() {
@@ -147,6 +166,16 @@ public class Bme680SensorDriver implements AutoCloseable {
         if (mHumidityUserDriver != null) {
             UserDriverManager.getManager().unregisterSensor(mHumidityUserDriver.getUserSensor());
             mHumidityUserDriver = null;
+        }
+    }
+
+    /**
+     * Unregister the gas {@link UserSensor}.
+     */
+    public void unregisterGasSensor() {
+        if (mGasUserDriver != null) {
+            UserDriverManager.getManager().unregisterSensor(mGasUserDriver.getUserSensor());
+            mGasUserDriver = null;
         }
     }
 
@@ -322,8 +351,8 @@ public class Bme680SensorDriver implements AutoCloseable {
         private UserSensor getUserSensor() {
             if (mUserSensor == null) {
                 mUserSensor = new UserSensor.Builder()
-                    .setType(Sensor.TYPE_RELATIVE_HUMIDITY)
-                    .setCustomType(Sensor.TYPE_DEVICE_PRIVATE_BASE, String.format("%s.%s.gas", DRIVER_VENDOR, DRIVER_NAME), Sensor.REPORTING_MODE_ON_CHANGE)
+//                    .setType(Sensor.TYPE_RELATIVE_HUMIDITY)
+                    .setCustomType(Sensor.TYPE_DEVICE_PRIVATE_BASE, Bme680.CHIP_SENSOR_TYPE_IAQ, Sensor.REPORTING_MODE_ON_CHANGE)
                     .setName(DRIVER_NAME)
                     .setVendor(DRIVER_VENDOR)
                     .setVersion(DRIVER_VERSION)
@@ -342,7 +371,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().gasResistance});
+            return new UserSensorReading(new float[]{mDevice.getSensorData().gasResistance, mDevice.getSensorData().airQualityScore});
         }
 
         @Override
