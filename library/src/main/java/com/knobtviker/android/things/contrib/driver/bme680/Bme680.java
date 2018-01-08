@@ -83,15 +83,15 @@ public class Bme680 implements AutoCloseable {
     /**
      * Maximum power consumption in micro-amperes when measuring pressure.
      */
-    public static final float MAX_POWER_CONSUMPTION_PRESSURE_UA = 849f; //714f
+    public static final float MAX_POWER_CONSUMPTION_PRESSURE_UA = 714f;
     /**
      * Maximum power consumption in micro-amperes when measuring pressure.
      */
-    public static final float MAX_POWER_CONSUMPTION_HUMIDITY_UA = 450f; //340f
+    public static final float MAX_POWER_CONSUMPTION_HUMIDITY_UA = 340f;
     /**
      * Maximum power consumption in micro-amperes when measuring volatile gases.
      */
-    public static final float MAX_POWER_CONSUMPTION_GAS_UA = 13f; //340f
+    public static final float MAX_POWER_CONSUMPTION_GAS_UA = 13f; //12f
     //TODO: Fix this fake data from BME280
     /**
      * Maximum frequency of the measurements.
@@ -298,10 +298,6 @@ public class Bme680 implements AutoCloseable {
     private static final int BME680_POLL_PERIOD_MILLISECONDS = 10;
 
     private I2cDevice device;
-    private final int[] temperatureCalibrationData = new int[3];
-    private final int[] pressureCalibrationData = new int[10];
-    private final int[] humidityCalibrationData = new int[7];
-    private final int[] gasHeaterCalibrationData = new int[3];
     private int heaterResistanceRange;
     private int heaterResistanceValue;
     private int errorRange;
@@ -323,9 +319,12 @@ public class Bme680 implements AutoCloseable {
     private boolean enabled = false;
     private int chipId;
     private int powerMode;
+    private Calibration calibration;
     private GasSettings gasSettings;
     private SensorSettings sensorSettings;
+    private Data data;
     private int ambientTemperature;
+    private int temperatureFine;
 
     /**
      * Create a new BME680 sensor driver connected on the given bus.
@@ -347,8 +346,6 @@ public class Bme680 implements AutoCloseable {
     public Bme680(@NonNull final String bus, final int address) throws IOException {
         final PeripheralManagerService pioService = new PeripheralManagerService();
         final I2cDevice device = pioService.openI2cDevice(bus, address);
-        sensorSettings = new SensorSettings();
-        gasSettings = new GasSettings();
         try {
             connect(device);
         } catch (IOException | RuntimeException e) {
@@ -367,8 +364,6 @@ public class Bme680 implements AutoCloseable {
      * @throws IOException
      */
     /*package*/  Bme680(I2cDevice device) throws IOException {
-        sensorSettings = new SensorSettings();
-        gasSettings = new GasSettings();
         connect(device);
     }
 
@@ -389,6 +384,11 @@ public class Bme680 implements AutoCloseable {
     }
 
     private void connect(I2cDevice device) throws IOException {
+        calibration = new Calibration();
+        sensorSettings = new SensorSettings();
+        gasSettings = new GasSettings();
+        data = new Data();
+
         this.device = device;
 
         chipId = this.device.readRegByte(BME680_REGISTER_ID);
@@ -404,35 +404,37 @@ public class Bme680 implements AutoCloseable {
         final byte[] mCalibrationArray = calibrate();
 
         // Read temperature calibration data (3 words)
-        temperatureCalibrationData[0] = concatBytes(mCalibrationArray[BME680_T1_MSB_REGISTER], mCalibrationArray[BME680_T1_LSB_REGISTER]) & 0xffff;
-        temperatureCalibrationData[1] = concatBytes(mCalibrationArray[BME680_T2_MSB_REGISTER], mCalibrationArray[BME680_T2_LSB_REGISTER]);
-        temperatureCalibrationData[2] = (short) mCalibrationArray[BME680_T3_REGISTER];
+        calibration.temperature[0] = concatBytes(mCalibrationArray[BME680_T1_MSB_REGISTER], mCalibrationArray[BME680_T1_LSB_REGISTER], false);
+        calibration.temperature[1] = concatBytes(mCalibrationArray[BME680_T2_MSB_REGISTER], mCalibrationArray[BME680_T2_LSB_REGISTER], true);
+        calibration.temperature[2] = (short) mCalibrationArray[BME680_T3_REGISTER];
+
+        Log.i(TAG, "temperature ---" + calibration.temperature[0] + " --- " + calibration.temperature[1] + " --- " + calibration.temperature[2]);
 
         // Read pressure calibration data (10 words)
-        pressureCalibrationData[0] = concatBytes(mCalibrationArray[BME680_P1_MSB_REGISTER], mCalibrationArray[BME680_P1_LSB_REGISTER]) & 0xffff;
-        pressureCalibrationData[1] = concatBytes(mCalibrationArray[BME680_P2_MSB_REGISTER], mCalibrationArray[BME680_P2_LSB_REGISTER]);
-        pressureCalibrationData[2] = (short) mCalibrationArray[BME680_P3_REGISTER];
-        pressureCalibrationData[3] = concatBytes(mCalibrationArray[BME680_P4_MSB_REGISTER], mCalibrationArray[BME680_P4_LSB_REGISTER]);
-        pressureCalibrationData[4] = concatBytes(mCalibrationArray[BME680_P5_MSB_REGISTER], mCalibrationArray[BME680_P5_LSB_REGISTER]);
-        pressureCalibrationData[5] = (short) mCalibrationArray[BME680_P6_REGISTER];
-        pressureCalibrationData[6] = (short) mCalibrationArray[BME680_P7_REGISTER];
-        pressureCalibrationData[7] = concatBytes(mCalibrationArray[BME680_P8_MSB_REGISTER], mCalibrationArray[BME680_P8_LSB_REGISTER]);
-        pressureCalibrationData[8] = concatBytes(mCalibrationArray[BME680_P9_MSB_REGISTER], mCalibrationArray[BME680_P9_LSB_REGISTER]);
-        pressureCalibrationData[9] = (short) mCalibrationArray[BME680_P10_REGISTER];
+        calibration.pressure[0] = concatBytes(mCalibrationArray[BME680_P1_MSB_REGISTER], mCalibrationArray[BME680_P1_LSB_REGISTER], true);
+        calibration.pressure[1] = concatBytes(mCalibrationArray[BME680_P2_MSB_REGISTER], mCalibrationArray[BME680_P2_LSB_REGISTER], true);
+        calibration.pressure[2] = (short) mCalibrationArray[BME680_P3_REGISTER];
+        calibration.pressure[3] = concatBytes(mCalibrationArray[BME680_P4_MSB_REGISTER], mCalibrationArray[BME680_P4_LSB_REGISTER], true);
+        calibration.pressure[4] = concatBytes(mCalibrationArray[BME680_P5_MSB_REGISTER], mCalibrationArray[BME680_P5_LSB_REGISTER], true);
+        calibration.pressure[5] = (short) mCalibrationArray[BME680_P6_REGISTER];
+        calibration.pressure[6] = (short) mCalibrationArray[BME680_P7_REGISTER];
+        calibration.pressure[7] = concatBytes(mCalibrationArray[BME680_P8_MSB_REGISTER], mCalibrationArray[BME680_P8_LSB_REGISTER], true);
+        calibration.pressure[8] = concatBytes(mCalibrationArray[BME680_P9_MSB_REGISTER], mCalibrationArray[BME680_P9_LSB_REGISTER], true);
+        calibration.pressure[9] = (short) mCalibrationArray[BME680_P10_REGISTER];
 
         // Read humidity calibration data (7 words)
-        humidityCalibrationData[0] = (((mCalibrationArray[BME680_H1_MSB_REGISTER] & 0xffff) << BME680_HUMIDITY_REGISTER_SHIFT_VALUE) | (mCalibrationArray[BME680_H1_LSB_REGISTER] & BME680_BIT_H1_DATA_MASK)) & 0xffff;
-        humidityCalibrationData[1] = (((mCalibrationArray[BME680_H2_MSB_REGISTER] & 0xffff) << BME680_HUMIDITY_REGISTER_SHIFT_VALUE) | (mCalibrationArray[BME680_H2_LSB_REGISTER] >> BME680_HUMIDITY_REGISTER_SHIFT_VALUE)) & 0xffff;
-        humidityCalibrationData[2] = (short) mCalibrationArray[BME680_H3_REGISTER];
-        humidityCalibrationData[3] = (short) mCalibrationArray[BME680_H4_REGISTER];
-        humidityCalibrationData[4] = (short) mCalibrationArray[BME680_H5_REGISTER];
-        humidityCalibrationData[5] = (short) mCalibrationArray[BME680_H6_REGISTER];
-        humidityCalibrationData[6] = (short) mCalibrationArray[BME680_H7_REGISTER];
+        calibration.humidity[0] = (((mCalibrationArray[BME680_H1_MSB_REGISTER] & 0xffff) << BME680_HUMIDITY_REGISTER_SHIFT_VALUE) | (mCalibrationArray[BME680_H1_LSB_REGISTER] & BME680_BIT_H1_DATA_MASK)) & 0xffff;
+        calibration.humidity[1] = (((mCalibrationArray[BME680_H2_MSB_REGISTER] & 0xffff) << BME680_HUMIDITY_REGISTER_SHIFT_VALUE) | (mCalibrationArray[BME680_H2_LSB_REGISTER] >> BME680_HUMIDITY_REGISTER_SHIFT_VALUE)) & 0xffff;
+        calibration.humidity[2] = (short) mCalibrationArray[BME680_H3_REGISTER];
+        calibration.humidity[3] = (short) mCalibrationArray[BME680_H4_REGISTER];
+        calibration.humidity[4] = (short) mCalibrationArray[BME680_H5_REGISTER];
+        calibration.humidity[5] = (short) mCalibrationArray[BME680_H6_REGISTER];
+        calibration.humidity[6] = (short) mCalibrationArray[BME680_H7_REGISTER];
 
         // Read gas heater calibration data (3 words)
-        gasHeaterCalibrationData[0] = (short) mCalibrationArray[BME680_GH1_REGISTER];
-        gasHeaterCalibrationData[1] = concatBytes(mCalibrationArray[BME680_GH2_MSB_REGISTER], mCalibrationArray[BME680_GH2_LSB_REGISTER]);
-        gasHeaterCalibrationData[2] = (short) mCalibrationArray[BME680_GH3_REGISTER];
+        calibration.gasHeater[0] = (short) mCalibrationArray[BME680_GH1_REGISTER];
+        calibration.gasHeater[1] = concatBytes(mCalibrationArray[BME680_GH2_MSB_REGISTER], mCalibrationArray[BME680_GH2_LSB_REGISTER], true);
+        calibration.gasHeater[2] = (short) mCalibrationArray[BME680_GH3_REGISTER];
 
         // Read other heater calibration data
         heaterResistanceRange = (short) ((this.device.readRegByte(BME680_ADDRESS_RESISTANCE_HEAT_RANGE_ADDRESS) & BME680_RHRANGE_MASK) / 16);
@@ -721,10 +723,20 @@ public class Bme680 implements AutoCloseable {
     public Data getSensorData() throws IOException {
         setPowerMode(MODE_FORCED);
 
-        final Data data = new Data();
+        for (int i = 0; i < DATA_READ_ATTEMPTS; i++) {
+            final Data data = new Data();
 
-        int attempts = DATA_READ_ATTEMPTS;
-        do {
+            data.status = device.readRegByte(BME680_FIELD0_ADDRESS);
+
+            if ((data.status & BME680_NEW_DATA_MASK) == 0) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(BME680_POLL_PERIOD_MILLISECONDS);
+                } catch (InterruptedException e) {
+                    Log.e(TAG, e.getMessage(), e);
+                }
+                continue;
+            }
+
             final byte[] buffer = new byte[BME680_FIELD_LENGTH];
             device.readRegBuffer(BME680_FIELD0_ADDRESS, buffer, BME680_FIELD_LENGTH);
 
@@ -733,10 +745,10 @@ public class Bme680 implements AutoCloseable {
             data.measureIndex = buffer[1];
 
             // read the raw data from the sensor
-            final int pressure = (buffer[2] << 12) | (buffer[3] << 4) | (buffer[4] >> 4);
-            final int temperature = (buffer[5] << 12) | (buffer[6] << 4) | (buffer[7] >> 4);
-            final int humidity = (buffer[8] << 8) | buffer[9];
-            final int gas_resistance = (buffer[13] << 2) | (buffer[14] >> 6);
+            final int pressure = ((int) buffer[2] * 4096) | ((int) buffer[3] * 16) | ((int) buffer[4] / 16);
+            final int temperature = ((int) buffer[5] * 4096) | ((int) buffer[6] * 16) | ((int) buffer[7] / 16);
+            final int humidity = (short) (((int) buffer[8] * 256) | (int) buffer[9]);
+            final int gas_resistance = (short) ((int) buffer[13] * 4 | (((int) buffer[14]) / 64));
             final int gas_range = buffer[14] & BME680_GAS_RANGE_MASK;
 
             data.status |= buffer[14] & BME680_GASM_VALID_MASK;
@@ -744,50 +756,43 @@ public class Bme680 implements AutoCloseable {
 
             data.heaterStable = (data.status & BME680_HEAT_STABLE_MASK) > 0;
 
-            if ((data.status & BME680_NEW_DATA_MASK) == 0) {
-                data.temperature = compensateTemperature(temperature);
-                data.pressure = compensatePressure(pressure, data.temperature);
-                data.humidity = compensateHumidity(humidity, data.temperature);
-                data.gasResistance = compensateGasResistance(gas_resistance, gas_range);
-                ambientTemperature = temperature;
-                break;
-            }
-            try {
-                TimeUnit.MILLISECONDS.sleep(BME680_POLL_PERIOD_MILLISECONDS);
-            } catch (InterruptedException e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
+            data.temperature = compensateTemperature(temperature) / 100.0f;
+            data.pressure = compensatePressure(pressure, temperature);
+            data.humidity = compensateHumidity(humidity, temperature) / 1000.0f;
+            data.gasResistance = compensateGasResistance(gas_resistance, gas_range);
+            ambientTemperature = temperature;
 
-            attempts--;
-        } while (attempts > 0);
+            this.data = data;
 
-        return data;
+            return data;
+        }
+
+        return this.data;
     }
 
-    //TODO: Check if can be replaced with device.readRegWord()
-    private int concatBytes(final byte msb, final byte lsb) {
-        return (msb << 8) | lsb;
+    private short concatBytes(final byte msb, final byte lsb, final boolean isSigned) {
+        return (short) ((((short) msb & 0xFF) << 8) | ((short) lsb & 0xff));
     }
 
     private int compensateTemperature(final int temperature) {
-        final int var1 = (temperature >> 3) - (temperatureCalibrationData[0] << 1);
-        final int var2 = (var1 * temperatureCalibrationData[1]) >> 11;
-        int var3 = ((var1 >> 1) * (var1 >> 1)) >> 12;
-        var3 = ((var3) * (temperatureCalibrationData[2] << 4)) >> 14;
-
-        return ((((var2 + var3) * 5) + 128) >> 8);
+        long var1 = (temperature >> 3) - (calibration.temperature[0] << 1);
+        long var2 = (var1 * calibration.temperature[1]) >> 11;
+        long var3 = ((var1 >> 1) * (var1 >> 1)) >> 12;
+        var3 = ((var3) * (calibration.temperature[2] << 4)) >> 14;
+        temperatureFine = (int) (var2 + var3);
+        return (short) (((temperatureFine * 5) + 128) >> 8);
     }
 
     @SuppressWarnings({"ConstantConditions", "NumericOverflow"})
     private int compensatePressure(final int pressure, final int temperature) {
         int var1 = ((temperature) >> 1) - 64000;
-        int var2 = ((((var1 >> 2) * (var1 >> 2)) >> 11) * pressureCalibrationData[5]) >> 2;
-        var2 = var2 + ((var1 * pressureCalibrationData[4]) << 1);
-        var2 = (var2 >> 2) + (pressureCalibrationData[3] << 16);
-        var1 = (((((var1 >> 2) * (var1 >> 2)) >> 13) * ((pressureCalibrationData[2] << 5)) >> 3) + ((pressureCalibrationData[1] * var1) >> 1));
+        int var2 = ((((var1 >> 2) * (var1 >> 2)) >> 11) * calibration.pressure[5]) >> 2;
+        var2 = var2 + ((var1 * calibration.pressure[4]) << 1);
+        var2 = (var2 >> 2) + (calibration.pressure[3] << 16);
+        var1 = (((((var1 >> 2) * (var1 >> 2)) >> 13) * ((calibration.pressure[2] << 5)) >> 3) + ((calibration.pressure[1] * var1) >> 1));
         var1 = var1 >> 18;
 
-        var1 = ((32768 + var1) * pressureCalibrationData[0]) >> 15;
+        var1 = ((32768 + var1) * calibration.pressure[0]) >> 15;
         int calculatedPressure = 1048576 - pressure;
         calculatedPressure = ((calculatedPressure - (var2 >> 12)) * (3125));
 
@@ -797,11 +802,11 @@ public class Bme680 implements AutoCloseable {
             calculatedPressure = ((calculatedPressure << 1) / var1);
         }
 
-        var1 = (pressureCalibrationData[8] * (((calculatedPressure >> 3) * (calculatedPressure >> 3)) >> 13)) >> 12;
-        var2 = ((calculatedPressure >> 2) * pressureCalibrationData[7]) >> 13;
-        int var3 = ((calculatedPressure >> 8) * (calculatedPressure >> 8) * (calculatedPressure >> 8) * pressureCalibrationData[9]) >> 17;
+        var1 = (calibration.pressure[8] * (((calculatedPressure >> 3) * (calculatedPressure >> 3)) >> 13)) >> 12;
+        var2 = ((calculatedPressure >> 2) * calibration.pressure[7]) >> 13;
+        int var3 = ((calculatedPressure >> 8) * (calculatedPressure >> 8) * (calculatedPressure >> 8) * calibration.pressure[9]) >> 17;
 
-        calculatedPressure = (calculatedPressure) + ((var1 + var2 + var3 + (pressureCalibrationData[6] << 7)) >> 4);
+        calculatedPressure = (calculatedPressure) + ((var1 + var2 + var3 + (calibration.pressure[6] << 7)) >> 4);
 
         return calculatedPressure;
     }
@@ -809,11 +814,11 @@ public class Bme680 implements AutoCloseable {
     @SuppressWarnings("PointlessArithmeticExpression")
     private int compensateHumidity(final int humidity, final int temperature) {
         final int temp_scaled = ((temperature * 5) + 128) >> 8;
-        final int var1 = (humidity - ((humidityCalibrationData[0] * 16))) - (((temp_scaled * humidityCalibrationData[2]) / (100)) >> 1);
-        final int var2 = (humidityCalibrationData[1] * (((temp_scaled * humidityCalibrationData[3]) / (100)) + (((temp_scaled * ((temp_scaled * humidityCalibrationData[4]) / (100))) >> 6) / (100)) + (1 * 16384))) >> 10;
+        final int var1 = (humidity - ((calibration.humidity[0] * 16))) - (((temp_scaled * calibration.humidity[2]) / (100)) >> 1);
+        final int var2 = (calibration.humidity[1] * (((temp_scaled * calibration.humidity[3]) / (100)) + (((temp_scaled * ((temp_scaled * calibration.humidity[4]) / (100))) >> 6) / (100)) + (1 * 16384))) >> 10;
         final int var3 = var1 * var2;
-        int var4 = humidityCalibrationData[5] << 7;
-        var4 = ((var4) + ((temp_scaled * humidityCalibrationData[6]) / (100))) >> 4;
+        int var4 = calibration.humidity[5] << 7;
+        var4 = ((var4) + ((temp_scaled * calibration.humidity[6]) / (100))) >> 4;
         final int var5 = ((var3 >> 14) * (var3 >> 14)) >> 10;
         final int var6 = (var4 * var5) >> 1;
         final int calc_hum = (((var3 + var6) >> 10) * (1000)) >> 12;
@@ -832,8 +837,8 @@ public class Bme680 implements AutoCloseable {
     private int calculateHeaterResistance(final int temperature) {
         final int normalizedTemperature = Math.min(Math.max(temperature, 200), 400);
 
-        final int var1 = ((ambientTemperature * gasHeaterCalibrationData[2]) / 1000) * 256;
-        final int var2 = (gasHeaterCalibrationData[2] + 784) * (((((gasHeaterCalibrationData[1] + 154009) * normalizedTemperature * 5) / 100) + 3276800) / 10);
+        final int var1 = ((ambientTemperature * calibration.gasHeater[2]) / 1000) * 256;
+        final int var2 = (calibration.gasHeater[2] + 784) * (((((calibration.gasHeater[1] + 154009) * normalizedTemperature * 5) / 100) + 3276800) / 10);
         final int var3 = var1 + (var2 / 2);
         final int var4 = (var3 / (heaterResistanceRange + 4));
         final int var5 = (131 * heaterResistanceValue) + 65536;

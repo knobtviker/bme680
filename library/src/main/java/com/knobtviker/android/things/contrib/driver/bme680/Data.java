@@ -18,14 +18,15 @@ public class Data {
     public int measureIndex = -1;
 
     // Temperature in degree celsius x100
-    public int temperature = -1;
+    public float temperature;
 
     // Pressure in Pascal
     public int pressure = -1;
 
     // Humidity in % relative humidity x1000
-    public int humidity = -1;
+    public float humidity;
 
     // Gas resistance in Ohms
     public int gasResistance = -1;
+
 }

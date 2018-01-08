@@ -311,7 +311,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         // DRIVER parameters
         // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
         private static final float DRIVER_MAX_RANGE = Bme680.MAX_GAS_PERCENT;
-        private static final float DRIVER_RESOLUTION = 0.008f; //0.008f;
+        private static final float DRIVER_RESOLUTION = 0.008f;
         private static final float DRIVER_POWER = Bme680.MAX_POWER_CONSUMPTION_GAS_UA / 1000.f;
         private static final int DRIVER_VERSION = 1;
         private static final String DRIVER_REQUIRED_PERMISSION = "";
@@ -342,7 +342,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().measureIndex});
+            return new UserSensorReading(new float[]{mDevice.getSensorData().gasResistance});
         }
 
         @Override
