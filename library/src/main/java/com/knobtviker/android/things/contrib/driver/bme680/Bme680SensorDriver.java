@@ -17,6 +17,8 @@ import java.util.UUID;
 public class Bme680SensorDriver implements AutoCloseable {
     private static final String TAG = Bme680SensorDriver.class.getSimpleName();
 
+    public static final int PRESSURE = 0;
+    public static final int ALTITUDE = 1;
     public static final int INDOOR_AIR_QUALITY_GAS_RESISTANCE = 0;
     public static final int INDOOR_AIR_QUALITY_INDEX = 1;
 
@@ -223,7 +225,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().pressure});
+            return new UserSensorReading(new float[]{mDevice.readTemperature(), mDevice.readAltitude()});
         }
 
         @Override
@@ -272,7 +274,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().temperature});
+            return new UserSensorReading(new float[]{mDevice.readTemperature()});
         }
 
         @Override
@@ -321,7 +323,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().humidity});
+            return new UserSensorReading(new float[]{mDevice.readHumidity()});
         }
 
         @Override
@@ -351,7 +353,6 @@ public class Bme680SensorDriver implements AutoCloseable {
         private UserSensor getUserSensor() {
             if (mUserSensor == null) {
                 mUserSensor = new UserSensor.Builder()
-//                    .setType(Sensor.TYPE_RELATIVE_HUMIDITY)
                     .setCustomType(Sensor.TYPE_DEVICE_PRIVATE_BASE, Bme680.CHIP_SENSOR_TYPE_IAQ, Sensor.REPORTING_MODE_ON_CHANGE)
                     .setName(DRIVER_NAME)
                     .setVendor(DRIVER_VENDOR)
@@ -371,7 +372,7 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.getSensorData().gasResistance, mDevice.getSensorData().airQualityScore});
+            return new UserSensorReading(new float[]{mDevice.readGasResistance(), mDevice.readAirQuality()});
         }
 
         @Override

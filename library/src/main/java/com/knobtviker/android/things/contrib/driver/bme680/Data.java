@@ -7,7 +7,7 @@ package com.knobtviker.android.things.contrib.driver.bme680;
 public class Data {
 
     // Contains new_data, gasm_valid & heat_stab
-    public int status = -1;
+    public byte status;
 
     public boolean heaterStable = false;
 
@@ -15,13 +15,13 @@ public class Data {
     public int gasIndex = -1;
 
     // Measurement index to track order
-    public int measureIndex = -1;
+    public byte measureIndex = -1;
 
     // Temperature in degree celsius x100
     public float temperature;
 
     // Pressure in Pascal
-    public int pressure = -1;
+    public float pressure = -1;
 
     // Humidity in % relative humidity x1000
     public float humidity;
@@ -31,4 +31,7 @@ public class Data {
 
     // Indoor air quality score index
     public float airQualityScore;
+
+    // Altitude base on measured pressure and set sea level
+    public float altitude;
 }
