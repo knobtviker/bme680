@@ -6,18 +6,18 @@ package com.knobtviker.android.things.contrib.driver.bme680;
 
 class GasSettings {
 
-    /*! Variable to store nb conversion */
-    public int nbConversion;
+    // Variable to store nb conversion
+    int nbConversion;
 
-    /*! Variable to store heater control */
+    // Variable to store heater control
     public int heaterControl;
 
-    /*! Run gas enable value */
+    // Run gas enable value
     int runGas;
 
-    /*! Pointer to store heater temperature */
-    public int heaterTemperature;
+    // Store heater temperature
+    int heaterTemperature;
 
-    /*! Pointer to store duration profile */
-    public int heaterDuration;
+    // Store duration profile
+    int heaterDuration;
 }

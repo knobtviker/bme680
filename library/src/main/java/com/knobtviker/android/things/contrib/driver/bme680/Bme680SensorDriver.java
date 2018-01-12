@@ -1,6 +1,7 @@
 package com.knobtviker.android.things.contrib.driver.bme680;
 
 import android.hardware.Sensor;
+import android.hardware.SensorManager;
 
 import com.google.android.things.userdriver.UserDriverManager;
 import com.google.android.things.userdriver.UserSensor;
@@ -17,10 +18,9 @@ import java.util.UUID;
 public class Bme680SensorDriver implements AutoCloseable {
     private static final String TAG = Bme680SensorDriver.class.getSimpleName();
 
-    public static final int PRESSURE = 0;
-    public static final int ALTITUDE = 1;
     public static final int INDOOR_AIR_QUALITY_GAS_RESISTANCE = 0;
-    public static final int INDOOR_AIR_QUALITY_INDEX = 1;
+    public static final int INDOOR_AIR_QUALITY_SCORE = 1;
+    public static final int INDOOR_AIR_QUALITY_INDEX = 2;
 
     private Bme680 mDevice;
 
@@ -225,13 +225,13 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.readTemperature(), mDevice.readAltitude()});
+            return new UserSensorReading(new float[]{mDevice.readPressure()});
         }
 
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setPressureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setPressureOversample(enabled ? Bme680.OVERSAMPLING_4X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -280,7 +280,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setTemperatureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setTemperatureOversample(enabled ? Bme680.OVERSAMPLING_8X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -329,7 +329,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setHumidityOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setHumidityOversample(enabled ? Bme680.OVERSAMPLING_4X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -372,7 +372,8 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         @Override
         public UserSensorReading read() throws IOException {
-            return new UserSensorReading(new float[]{mDevice.readGasResistance(), mDevice.readAirQuality()});
+            final float airQuality = mDevice.readAirQuality();
+            return new UserSensorReading(new float[]{mDevice.readGasResistance(), airQuality, Math.round(((100.0f -airQuality)/100.0f)*500)});
         }
 
         @Override
@@ -380,7 +381,7 @@ public class Bme680SensorDriver implements AutoCloseable {
             mEnabled = enabled;
             mDevice.setGasStatus(enabled ? Bme680.ENABLE_GAS: Bme680.DISABLE_GAS);
             if (enabled) {
-                mDevice.setGasHeaterProfile(Bme680.PROFILE_0, 320, 120);
+                mDevice.setGasHeaterProfile(Bme680.PROFILE_0, 320, 150);
                 mDevice.selectGasHeaterProfile(Bme680.PROFILE_0);
             }
             maybeSleep();
@@ -391,4 +392,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         }
     }
 
+    public static float getAltitudeFromPressure(final float pressure) {
+        return SensorManager.getAltitude(pressure, SensorManager.PRESSURE_STANDARD_ATMOSPHERE);
+    }
 }
