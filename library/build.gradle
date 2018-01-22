@@ -6,9 +6,8 @@ android {
     defaultConfig {
         minSdkVersion 26
         targetSdkVersion 27
-        versionCode 6
-        versionName "1.0.6"
-
+        versionCode 7
+        versionName "1.0.7"
     }
 
     buildTypes {
@@ -16,7 +15,6 @@ android {
             minifyEnabled false
         }
     }
-
 }
 
 dependencies {
