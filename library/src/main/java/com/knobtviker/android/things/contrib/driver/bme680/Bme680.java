@@ -778,34 +778,59 @@ public class Bme680 implements AutoCloseable {
         return (device.readRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS) & BME680_RUN_GAS_MASK) >> RUN_GAS_POSITION;
     }
 
-    public float readTemperature() throws IOException {
-        getSensorData();
+    public float readTemperature(boolean update) throws IOException {
+        if (update)
+            getSensorData();
 
         return this.data.temperature;
     }
 
-    public float readPressure() throws IOException {
-        getSensorData();
+    public float readTemperature() throws IOException {
+        return readTemperature(true);
+    }
+
+    public float readPressure(boolean update) throws IOException {
+        if (update)
+            getSensorData();
 
         return this.data.pressure;
     }
 
-    public float readHumidity() throws IOException {
-        getSensorData();
+    public float readPressure() throws IOException {
+        return readPressure(true);
+    }
+
+    public float readHumidity(boolean update) throws IOException {
+        if (update)
+            getSensorData();
 
         return this.data.humidity;
     }
 
-    public float readGasResistance() throws IOException {
-        getSensorData();
+    public float readHumidity() throws IOException {
+        return readHumidity(true);
+    }
+
+    public float readGasResistance(boolean update) throws IOException {
+        if (update)
+            getSensorData();
 
         return this.data.gasResistance;
     }
 
-    public float readAirQuality() throws IOException {
-        getSensorData();
+    public float readGasResistance() throws IOException {
+        return readGasResistance(true);
+    }
+
+    public float readAirQuality(boolean update) throws IOException {
+        if (update)
+            getSensorData();
 
         return this.data.airQualityScore;
+    }
+
+    public float readAirQuality() throws IOException {
+        return readAirQuality(true);
     }
 
     // Get sensor data
