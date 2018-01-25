@@ -1018,7 +1018,7 @@ public class Bme680 implements AutoCloseable {
         newDuration += (477 * 4); // TPH switching duration
         newDuration += (477 * 5); // Gas measurement duration
         newDuration += (500); // Get it to the closest whole number
-        newDuration /= (1000); // Convert to milisecond [ms]
+        newDuration /= (1000); // Convert to millisecond [ms]
         newDuration += (1); // Wake up duration of 1ms
 
         // The remaining time should be used for heating

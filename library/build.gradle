@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
 
 android {
     compileSdkVersion 27
@@ -20,4 +21,16 @@ android {
 dependencies {
     compileOnly 'com.google.android.things:androidthings:0.6.1-devpreview'
     implementation 'com.android.support:support-annotations:27.0.2'
+}
+
+publishing {
+    publications {
+        library(MavenPublication) {
+            setGroupId('com.knobtviker.android.things.contrib.driver')
+            setArtifactId('bme680')
+            version android.defaultConfig.versionName
+
+            artifact(bundleRelease)
+        }
+    }
 }
