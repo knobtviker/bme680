@@ -210,6 +210,24 @@ public class Bme680 implements AutoCloseable {
     public static final int PROFILE_8 = 8;
     public static final int PROFILE_9 = 9;
 
+    /**
+     * Settings selector.
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({BME680_OST_SEL, BME680_OSP_SEL, BME680_OSH_SEL, BME680_GAS_MEAS_SEL, BME680_FILTER_SEL, BME680_HCNTRL_SEL, BME680_RUN_GAS_SEL, BME680_NBCONV_SEL, BME680_GAS_SENSOR_SEL})
+    public @interface Settings {
+    }
+
+    public static final int BME680_OST_SEL = 1;
+    public static final int BME680_OSP_SEL = 2;
+    public static final int BME680_OSH_SEL = 4;
+    public static final int BME680_GAS_MEAS_SEL = 8;
+    public static final int BME680_FILTER_SEL = 16;
+    public static final int BME680_HCNTRL_SEL = 32;
+    public static final int BME680_RUN_GAS_SEL = 64;
+    public static final int BME680_NBCONV_SEL = 128;
+    public static final int BME680_GAS_SENSOR_SEL = (BME680_GAS_MEAS_SEL | BME680_RUN_GAS_SEL | BME680_NBCONV_SEL);
+
     // Registers
     private static final int BME680_REGISTER_ID = 0xD0;
     private static final int BME680_REGISTER_SOFT_RESET = 0xe0;
@@ -251,11 +269,11 @@ public class Bme680 implements AutoCloseable {
 
     // Mask definitions
     private static final int BME680_GAS_MEASURE_MASK = 0x30;
-    private static final int BME680_NBCONVERSION_MASK = 0X0F;
-    private static final int BME680_FILTER_MASK = 0X1C;
-    private static final int BME680_OVERSAMPLING_TEMPERATURE_MASK = 0XE0;
-    private static final int BME680_OVERSAMPLING_PRESSURE_MASK = 0X1C;
-    private static final int BME680_OVERSAMPLING_HUMIDITY_MASK = 0X07;
+    private static final int BME680_NBCONVERSION_MASK = 0x0F;
+    private static final int BME680_FILTER_MASK = 0x1C;
+    private static final int BME680_OVERSAMPLING_TEMPERATURE_MASK = 0xE0;
+    private static final int BME680_OVERSAMPLING_PRESSURE_MASK = 0x1C;
+    private static final int BME680_OVERSAMPLING_HUMIDITY_MASK = 0x07;
     private static final int BME680_HEATER_CONTROL_MASK = 0x08;
     private static final int BME680_RUN_GAS_MASK = 0x10;
     private static final int BME680_MODE_MASK = 0x03;
@@ -419,17 +437,17 @@ public class Bme680 implements AutoCloseable {
 
         this.device = device;
 
+        softReset();
+
         chipId = this.device.readRegByte(BME680_REGISTER_ID);
         if (chipId != CHIP_ID_BME680) {
-            throw new IllegalStateException("I2C device not Bosch BME680");
+            throw new IllegalStateException("Bosch BME680 not found");
         }
-
-        softReset();
 
         setPowerMode(MODE_SLEEP);
 
         // Read calibration data in 2 parts and concat them into 1 array
-        final byte[] mCalibrationArray = calibrate();
+        final byte[] mCalibrationArray = readCalibrationData();
 
         // Read temperature calibration data (3 words)
         calibration.temperature[0] = concatBytes(mCalibrationArray[BME680_T1_MSB_REGISTER], mCalibrationArray[BME680_T1_LSB_REGISTER], false);
@@ -467,13 +485,12 @@ public class Bme680 implements AutoCloseable {
         heaterResistanceValue = this.device.readRegByte(BME680_ADDRESS_RESISTANCE_HEAT_VALUE_ADDRESS);
         errorRange = ((this.device.readRegByte(BME680_ADDRESS_RANGE_SOFTWARE_ERROR_ADDRESS) & 0xFF) & (BME680_RSERROR_MASK & 0xFF)) / 16;
 
-        setTemperatureOversample(OVERSAMPLING_8X);
-        setHumidityOversample(OVERSAMPLING_4X);
-        setPressureOversample(OVERSAMPLING_4X);
-        setFilter(FILTER_SIZE_3);
-        setGasStatus(ENABLE_GAS);
-        setGasHeaterProfile(Bme680.PROFILE_0, 320, 150);
-        selectGasHeaterProfile(Bme680.PROFILE_0);
+        setTemperatureOversample(OVERSAMPLING_SKIPPED);
+        setHumidityOversample(OVERSAMPLING_SKIPPED);
+        setPressureOversample(OVERSAMPLING_SKIPPED);
+        setFilter(FILTER_SIZE_NONE);
+
+        setGasStatus(DISABLE_GAS);
     }
 
     // Initiate a soft reset
@@ -488,20 +505,16 @@ public class Bme680 implements AutoCloseable {
     }
 
     // Set power mode
-    @SuppressWarnings("PointlessBitwiseExpression")
-    public void setPowerMode(@Mode final int mode) throws IOException {
+    public void setPowerMode(@Mode final int value) throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_T_P_MODE_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_MODE_MASK;
-        regCtrl |= mode << MODE_POSITION;
-        device.writeRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_MODE_MASK, MODE_POSITION, value);
 
-        this.powerMode = mode;
+        this.powerMode = value;
 
-        while (getPowerMode() != this.powerMode) {
+        while (this.powerMode != getPowerMode()) {
             SystemClock.sleep(BME680_POLL_PERIOD_MILLISECONDS);
         }
     }
@@ -518,7 +531,7 @@ public class Bme680 implements AutoCloseable {
     }
 
     // Read calibration array
-    private byte[] calibrate() throws IOException {
+    private byte[] readCalibrationData() throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
         }
@@ -537,17 +550,13 @@ public class Bme680 implements AutoCloseable {
 
     // Set temperature oversampling
     // A higher oversampling value means more stable sensor readings, with less noise and jitter.
-    // However each step of oversampling adds about 2ms to the latency,
-    // causing a slower response time to fast transients.
+    // However each step of oversampling adds about 2ms to the latency, causing a slower response time to fast transients.
     public void setTemperatureOversample(@Oversampling final int value) throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_T_P_MODE_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_OVERSAMPLING_TEMPERATURE_MASK;
-        regCtrl |= value << OVERSAMPLING_TEMPERATURE_POSITION;
-        device.writeRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_OVERSAMPLING_TEMPERATURE_MASK, OVERSAMPLING_TEMPERATURE_POSITION, value);
 
         sensorSettings.oversamplingTemperature = value;
     }
@@ -563,18 +572,13 @@ public class Bme680 implements AutoCloseable {
 
     // Set humidity oversampling
     // A higher oversampling value means more stable sensor readings, with less noise and jitter.
-    // However each step of oversampling adds about 2ms to the latency,
-    // causing a slower response time to fast transients.
-    @SuppressWarnings("PointlessBitwiseExpression")
+    // However each step of oversampling adds about 2ms to the latency, causing a slower response time to fast transients.
     public void setHumidityOversample(@Oversampling final int value) throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_OS_H_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_OVERSAMPLING_HUMIDITY_MASK;
-        regCtrl |= value << OVERSAMPLING_HUMIDITY_POSITION;
-        device.writeRegByte(BME680_CONFIG_OS_H_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_OS_H_ADDRESS, BME680_OVERSAMPLING_HUMIDITY_MASK, OVERSAMPLING_HUMIDITY_POSITION, value);
 
         sensorSettings.oversamplingHumidity = value;
     }
@@ -598,10 +602,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_T_P_MODE_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_OVERSAMPLING_PRESSURE_MASK;
-        regCtrl |= value << OVERSAMPLING_PRESSURE_POSITION;
-        device.writeRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_OVERSAMPLING_PRESSURE_MASK, OVERSAMPLING_PRESSURE_POSITION, value);
 
         sensorSettings.oversamplingPressure = value;
     }
@@ -627,10 +628,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_ODR_FILTER_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_FILTER_MASK;
-        regCtrl |= value << FILTER_POSITION;
-        device.writeRegByte(BME680_CONFIG_ODR_FILTER_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_ODR_FILTER_ADDRESS, BME680_FILTER_MASK, FILTER_POSITION, value);
 
         sensorSettings.filter = value;
     }
@@ -654,10 +652,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException(String.format(Locale.getDefault(), "Profile '%d should be between %d and %d", value, PROFILE_0, PROFILE_9));
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_NBCONVERSION_MASK;
-        regCtrl |= value << NBCONVERSION_POSITION;
-        device.writeRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, BME680_NBCONVERSION_MASK, NBCONVERSION_POSITION, value);
 
         gasSettings.nbConversion = value;
     }
@@ -747,7 +742,7 @@ public class Bme680 implements AutoCloseable {
         duration = newDuration;
 
         // Get the gas duration only when the run gas is enabled
-        if (gasSettings.runGas == 1) {
+        if (gasSettings.runGas == ENABLE_GAS) {
             // The remaining time should be used for heating */
             duration += gasSettings.heaterDuration;
         }
@@ -761,10 +756,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        int regCtrl = device.readRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS) & 0xff;
-        regCtrl &= ~BME680_RUN_GAS_MASK;
-        regCtrl |= value << RUN_GAS_POSITION;
-        device.writeRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, (byte) (regCtrl));
+        setRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, BME680_RUN_GAS_MASK, RUN_GAS_POSITION, value);
 
         gasSettings.runGas = value;
     }
@@ -812,11 +804,6 @@ public class Bme680 implements AutoCloseable {
     private void getSensorData() throws IOException {
         setPowerMode(MODE_FORCED);
 
-        // Get the total measurement duration so as to sleep or wait till the measurement is complete
-        // Delay till the measurement is ready.
-        SystemClock.sleep(getProfileDuration() * 2);
-
-//        for (int i = 0; i < DATA_READ_ATTEMPTS; i++) {
         final byte status = device.readRegByte(BME680_FIELD0_ADDRESS);
 
         //if sensor has new data available
@@ -834,7 +821,7 @@ public class Bme680 implements AutoCloseable {
             // read the raw data from the sensor
             final int temperature = ((buffer[5] & 0xff) << 12) | ((buffer[6] & 0xff) << 4) | ((buffer[7] & 0xff) >> 4);
             final int pressure = ((buffer[2] & 0xff) << 12) | ((buffer[3] & 0xff) << 4) | ((buffer[4] & 0xff) >> 4);
-            final int humidity = ((buffer[8] & 0xff) << 8) | (buffer[9]);
+            final int humidity = (buffer[8] << 8) | (buffer[9] & 0xff);
             final int gas_resistance = ((buffer[13] & 0xff) << 2) | ((buffer[14] & 0xff) >> 6);
             final int gas_range = buffer[14] & BME680_GAS_RANGE_MASK;
 
@@ -1016,5 +1003,29 @@ public class Bme680 implements AutoCloseable {
         }
 
         return sum;
+    }
+
+    private String bytesToHex(final byte[] bytes) {
+        final char[] hexArray = "0123456789ABCDEF".toCharArray();
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
+    private void setRegByte(final int address, final int mask, final int position, final int value) throws IOException {
+        if (device == null) {
+            throw new IllegalStateException("I2C device not open");
+        }
+
+        byte regCtrl = device.readRegByte(address);
+
+        regCtrl &= ~mask;
+        regCtrl |= (value << position);
+
+        device.writeRegByte(address, regCtrl);
     }
 }
