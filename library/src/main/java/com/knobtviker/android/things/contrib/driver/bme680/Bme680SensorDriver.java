@@ -227,7 +227,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setPressureOversample(enabled ? Bme680.OVERSAMPLING_16X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setPressureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -276,7 +276,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setTemperatureOversample(enabled ? Bme680.OVERSAMPLING_16X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setTemperatureOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 
@@ -325,7 +325,7 @@ public class Bme680SensorDriver implements AutoCloseable {
         @Override
         public void setEnabled(boolean enabled) throws IOException {
             mEnabled = enabled;
-            mDevice.setHumidityOversample(enabled ? Bme680.OVERSAMPLING_16X : Bme680.OVERSAMPLING_SKIPPED);
+            mDevice.setHumidityOversample(enabled ? Bme680.OVERSAMPLING_1X : Bme680.OVERSAMPLING_SKIPPED);
             maybeSleep();
         }
 

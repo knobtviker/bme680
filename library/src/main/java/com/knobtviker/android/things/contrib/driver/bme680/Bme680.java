@@ -510,7 +510,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_MODE_MASK, MODE_POSITION, value);
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) BME680_MODE_MASK, MODE_POSITION, value);
 
         this.powerMode = value;
 
@@ -556,7 +556,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_OVERSAMPLING_TEMPERATURE_MASK, OVERSAMPLING_TEMPERATURE_POSITION, value);
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) BME680_OVERSAMPLING_TEMPERATURE_MASK, OVERSAMPLING_TEMPERATURE_POSITION, value);
 
         sensorSettings.oversamplingTemperature = value;
     }
@@ -578,7 +578,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_OS_H_ADDRESS, BME680_OVERSAMPLING_HUMIDITY_MASK, OVERSAMPLING_HUMIDITY_POSITION, value);
+        setRegByte(BME680_CONFIG_OS_H_ADDRESS, (byte) BME680_OVERSAMPLING_HUMIDITY_MASK, OVERSAMPLING_HUMIDITY_POSITION, value);
 
         sensorSettings.oversamplingHumidity = value;
     }
@@ -602,7 +602,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, BME680_OVERSAMPLING_PRESSURE_MASK, OVERSAMPLING_PRESSURE_POSITION, value);
+        setRegByte(BME680_CONFIG_T_P_MODE_ADDRESS, (byte) BME680_OVERSAMPLING_PRESSURE_MASK, OVERSAMPLING_PRESSURE_POSITION, value);
 
         sensorSettings.oversamplingPressure = value;
     }
@@ -628,7 +628,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_ODR_FILTER_ADDRESS, BME680_FILTER_MASK, FILTER_POSITION, value);
+        setRegByte(BME680_CONFIG_ODR_FILTER_ADDRESS, (byte) BME680_FILTER_MASK, FILTER_POSITION, value);
 
         sensorSettings.filter = value;
     }
@@ -643,7 +643,6 @@ public class Bme680 implements AutoCloseable {
     }
 
     // Set current gas sensor conversion profile: 0 to 9. Select one of the 10 configured heating durations/set points.
-    @SuppressWarnings("PointlessBitwiseExpression")
     public void selectGasHeaterProfile(@HeaterProfile final int value) throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
@@ -652,7 +651,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException(String.format(Locale.getDefault(), "Profile '%d should be between %d and %d", value, PROFILE_0, PROFILE_9));
         }
 
-        setRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, BME680_NBCONVERSION_MASK, NBCONVERSION_POSITION, value);
+        setRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, (byte) BME680_NBCONVERSION_MASK, NBCONVERSION_POSITION, value);
 
         gasSettings.nbConversion = value;
     }
@@ -756,7 +755,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        setRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS, BME680_RUN_GAS_MASK, RUN_GAS_POSITION, value);
+        setRegByte(BME680_CONFIG_HEATER_CONTROL_ADDRESS, (byte) BME680_RUN_GAS_MASK, RUN_GAS_POSITION, value);
 
         gasSettings.runGas = value;
     }
@@ -767,7 +766,7 @@ public class Bme680 implements AutoCloseable {
             throw new IllegalStateException("I2C device not open");
         }
 
-        return (device.readRegByte(BME680_CONFIG_ODR_RUN_GAS_NBC_ADDRESS) & BME680_RUN_GAS_MASK) >> RUN_GAS_POSITION;
+        return (device.readRegByte(BME680_CONFIG_HEATER_CONTROL_ADDRESS) & BME680_RUN_GAS_MASK) >> RUN_GAS_POSITION;
     }
 
     public float readTemperature() throws IOException {
@@ -1016,16 +1015,19 @@ public class Bme680 implements AutoCloseable {
         return new String(hexChars);
     }
 
-    private void setRegByte(final int address, final int mask, final int position, final int value) throws IOException {
+    private void setRegByte(final int address, final byte mask, final int position, final int value) throws IOException {
         if (device == null) {
             throw new IllegalStateException("I2C device not open");
         }
 
-        byte regCtrl = device.readRegByte(address);
+        final byte oldData = device.readRegByte(address);
 
-        regCtrl &= ~mask;
-        regCtrl |= (value << position);
-
-        device.writeRegByte(address, regCtrl);
+        byte newData;
+        if (position == 0) {
+            newData = (byte) ((oldData & ~mask) | (value & mask));
+        } else {
+            newData = (byte) ((oldData & ~mask) | ((value << position) & mask));
+        }
+        device.writeRegByte(address, newData);
     }
 }
