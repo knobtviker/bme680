@@ -1,4 +1,4 @@
-package com.knobtviker.android.things.contrib.driver.bme680;
+package com.knobtviker.android.things.contrib.community.driver.bme680;
 
 /**
  * Created by bojan on 16/11/2017.
@@ -191,14 +191,6 @@ public class Bme680 implements AutoCloseable {
     public @interface HeaterProfile {
     }
 
-    /**
-     * Gas heater duration.
-     */
-    @Retention(RetentionPolicy.SOURCE)
-    @IntRange(from = 1, to = 4032)
-    public @interface HeaterDuration {
-    }
-
     public static final int PROFILE_0 = 0;
     public static final int PROFILE_1 = 1;
     public static final int PROFILE_2 = 2;
@@ -209,6 +201,14 @@ public class Bme680 implements AutoCloseable {
     public static final int PROFILE_7 = 7;
     public static final int PROFILE_8 = 8;
     public static final int PROFILE_9 = 9;
+
+    /**
+     * Gas heater duration.
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntRange(from = 1, to = 4032)
+    public @interface HeaterDuration {
+    }
 
     /**
      * Settings selector.
@@ -356,10 +356,8 @@ public class Bme680 implements AutoCloseable {
         32258064L, 16016016L, 8000000L, 4000000L, 2000000L, 1000000L, 500000L, 250000L, 125000L
     };
 
-    private int DATA_READ_ATTEMPTS = 10;
     private int DATA_GAS_BURN_IN = 50;
 
-    private boolean enabled = false;
     private int chipId;
     private int powerMode;
     private Calibration calibration;
@@ -441,7 +439,7 @@ public class Bme680 implements AutoCloseable {
 
         chipId = this.device.readRegByte(BME680_REGISTER_ID);
         if (chipId != CHIP_ID_BME680) {
-            throw new IllegalStateException("Bosch BME680 not found");
+            throw new IllegalStateException(String.format("%s %s not found.", CHIP_VENDOR, CHIP_NAME));
         }
 
         setPowerMode(MODE_SLEEP);
@@ -485,9 +483,9 @@ public class Bme680 implements AutoCloseable {
         heaterResistanceValue = this.device.readRegByte(BME680_ADDRESS_RESISTANCE_HEAT_VALUE_ADDRESS);
         errorRange = ((this.device.readRegByte(BME680_ADDRESS_RANGE_SOFTWARE_ERROR_ADDRESS) & 0xFF) & (BME680_RSERROR_MASK & 0xFF)) / 16;
 
-        setTemperatureOversample(OVERSAMPLING_SKIPPED);
-        setHumidityOversample(OVERSAMPLING_SKIPPED);
-        setPressureOversample(OVERSAMPLING_SKIPPED);
+        setTemperatureOversample(OVERSAMPLING_1X);
+        setHumidityOversample(OVERSAMPLING_1X);
+        setPressureOversample(OVERSAMPLING_1X);
         setFilter(FILTER_SIZE_NONE);
 
         setGasStatus(DISABLE_GAS);

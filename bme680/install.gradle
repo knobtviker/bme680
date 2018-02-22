@@ -1,0 +1,39 @@
+apply plugin: 'com.github.dcendents.android-maven'
+
+group = 'com.knobtviker.android.things.contrib.community.driver'
+
+install {
+    repositories.mavenInstaller {
+        pom {
+            project {
+                packaging 'aar'
+                groupId 'com.knobtviker.android.things.contrib.community.driver'
+                artifactId 'bme680'
+
+                name 'bme680'
+                description 'Android Things Bosch BME680 driver'
+                url 'https://github.com/knobtviker/bme680'
+
+                licenses {
+                    license {
+                        name 'MIT'
+                        url 'https://github.com/knobtviker/bme680/blob/master/LICENSE'
+                    }
+                }
+                developers {
+                    developer {
+                        id 'knobtviker'
+                        name 'Bojan Komljenović'
+                        email 'knobtviker@gmail.com'
+                    }
+                }
+                scm {
+                    connection 'https://github.com/knobtviker/bme680.git'
+                    developerConnection 'https://github.com/knobtviker/bme680.git'
+                    url 'https://github.com/knobtviker/bme680'
+
+                }
+            }
+        }
+    }
+}

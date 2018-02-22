@@ -1,9 +1,9 @@
-package com.knobtviker.android.things.contrib.driver.bme680;
+package com.knobtviker.android.things.contrib.community.driver.bme680;
 
-import static com.knobtviker.android.things.contrib.driver.bme680.Bme680.OVERSAMPLING_SKIPPED;
-import static com.knobtviker.android.things.contrib.driver.bme680.Bme680.FILTER_SIZE_NONE;
-import static com.knobtviker.android.things.contrib.driver.bme680.Bme680.Oversampling;
-import static com.knobtviker.android.things.contrib.driver.bme680.Bme680.Filter;
+import static com.knobtviker.android.things.contrib.community.driver.bme680.Bme680.OVERSAMPLING_SKIPPED;
+import static com.knobtviker.android.things.contrib.community.driver.bme680.Bme680.FILTER_SIZE_NONE;
+import static com.knobtviker.android.things.contrib.community.driver.bme680.Bme680.Oversampling;
+import static com.knobtviker.android.things.contrib.community.driver.bme680.Bme680.Filter;
 
 /**
  * Created by bojan on 27/11/2017.
