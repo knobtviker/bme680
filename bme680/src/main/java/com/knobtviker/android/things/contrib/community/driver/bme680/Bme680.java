@@ -11,7 +11,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.google.android.things.pio.I2cDevice;
-import com.google.android.things.pio.PeripheralManagerService;
+import com.google.android.things.pio.PeripheralManager;
 
 import java.io.IOException;
 import java.lang.annotation.Retention;
@@ -386,8 +386,8 @@ public class Bme680 implements AutoCloseable {
      * @throws IOException
      */
     public Bme680(@NonNull final String bus, final int address) throws IOException {
-        final PeripheralManagerService pioService = new PeripheralManagerService();
-        final I2cDevice device = pioService.openI2cDevice(bus, address);
+        final PeripheralManager peripheralManager = PeripheralManager.getInstance();
+        final I2cDevice device = peripheralManager.openI2cDevice(bus, address);
         try {
             connect(device);
         } catch (IOException | RuntimeException e) {
