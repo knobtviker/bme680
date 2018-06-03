@@ -187,6 +187,16 @@ public class Bme680SensorDriver implements AutoCloseable {
         }
     }
 
+    public void setTemperatureOffset(final int value) {
+        if (mDevice == null) {
+            throw new IllegalStateException("cannot set an offset on closed driver");
+        }
+
+        if (mTemperatureUserDriver != null) {
+            mTemperatureUserDriver.setTemperatureOffset(value);
+        }
+    }
+
     private class PressureUserDriver implements UserSensorDriver {
         // DRIVER parameters
         // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
@@ -278,6 +288,10 @@ public class Bme680SensorDriver implements AutoCloseable {
 
         private boolean isEnabled() {
             return mEnabled;
+        }
+
+        public void setTemperatureOffset(final int value) {
+            mDevice.setTemperatureOffset(value);
         }
     }
 
