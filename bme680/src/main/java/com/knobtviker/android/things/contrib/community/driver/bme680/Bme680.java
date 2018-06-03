@@ -19,6 +19,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static java.lang.Math.abs;
+
 /**
  * Driver for the Bosch BME 680 sensor.
  */
@@ -367,6 +369,7 @@ public class Bme680 implements AutoCloseable {
     private LinkedBlockingQueue<Long> gasResistanceData = new LinkedBlockingQueue<>(DATA_GAS_BURN_IN);
     private int temperatureFine;
     private long ambientTemperature;
+    private int offsetTemperature;
 
     /**
      * Create a new BME680 sensor driver connected on the given bus.
@@ -489,6 +492,8 @@ public class Bme680 implements AutoCloseable {
         setFilter(FILTER_SIZE_NONE);
 
         setGasStatus(DISABLE_GAS);
+
+        setTemperatureOffset(0);
     }
 
     // Initiate a soft reset
@@ -758,6 +763,17 @@ public class Bme680 implements AutoCloseable {
         gasSettings.runGas = value;
     }
 
+    // Set temperature offset in celsius
+    // If set, the temperature t_fine will be increased by given value in celsius.
+    // Parameter value is temperature offset in Celsius, eg. 4, -8, 1.25
+    public void setTemperatureOffset(final int value) {
+        if (value == 0) {
+            this.offsetTemperature = 0;
+        } else {
+            this.offsetTemperature = (int) (Math.copySign(((Math.abs(value) * 100 << 8) - 128) / 5, value));
+        }
+    }
+
     // Get the current gas status
     public int getGasStatus() throws IOException {
         if (device == null) {
@@ -850,7 +866,7 @@ public class Bme680 implements AutoCloseable {
         int var2 = (var1 * calibration.temperature[1]) >> 11;
         int var3 = ((var1 >> 1) * (var1 >> 1)) >> 12;
         var3 = ((var3) * (calibration.temperature[2] << 4)) >> 14;
-        temperatureFine = var2 + var3;
+        temperatureFine = (var2 + var3) + offsetTemperature;
         return ((temperatureFine * 5) + 128) >> 8;
     }
 
