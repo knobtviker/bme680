@@ -11,7 +11,7 @@ How to use the driver
 ### Gradle dependency
 
 To use the `bme680` driver, simply add the line below to your project's `build.gradle`,
-where `<version>` matches the last version of the driver available on [jcenter][jcenter].
+where `<version>` matches the last version of the driver available on [jcenter](https://bintray.com/bintray/jcenter?filterByPkgName=bme680) .
 
 ```
 dependencies {
@@ -34,7 +34,7 @@ try {
     // threshold filter or gas status settings according to your use case
     bme680.setTemperatureOversampling(Bme680.OVERSAMPLING_1X);
     // Ensure the driver is powered and not sleeping before trying to read from it
-    bme680.setMode(Bme680.MODE_NORMAL);
+    bme680.setPowerMode(Bme680.MODE_NORMAL);
 } catch (IOException e) {
     // couldn't configure the device...
 }
@@ -44,9 +44,7 @@ try {
     float temperature = bme680.readTemperature();
     float humidty = bme680.readHumidity();
     float pressure = bme680.readPressure();
-
-    // There are other low level air quality methods exposed
-    float airQuality = bme680.readAirQuality();
+    float airQuality = bme680.readAirQuality(); // There are other low level air quality methods exposed
 } catch (IOException e) {
     // error reading temperature
 }
@@ -54,7 +52,7 @@ try {
 // Close the environmental sensor when finished:
 
 try {
-    // If nothing else needs to read sensor values, consider calling setMode(Bme680.MODE_SLEEP)
+    // If nothing else needs to read sensor values, consider calling setPowerMode(Bme680.MODE_SLEEP)
     bme680.close();
 } catch (IOException e) {
     // error closing sensor
@@ -62,7 +60,7 @@ try {
 ```
 
 If you need to read sensor values continuously, you can register the Bme680 with the system and
-listen for sensor values using the [Sensor APIs][sensors]:
+listen for sensor values using the [Sensor APIs](https://developer.android.com/guide/topics/sensors/sensors_overview):
 ```java
 SensorManager mSensorManager = getSystemService(Context.SENSOR_SERVICE);
 SensorEventListener mListener = ...;
