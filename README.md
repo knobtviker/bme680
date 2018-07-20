@@ -93,13 +93,12 @@ try {
     mSensorDriver.registerGasSensor();
 
     // Configure temperature offset curve if data looks sligthly off
-    // mSensorDriver.setTemperatureOffset(-1);
+    mSensorDriver.setTemperatureOffset(-1);
 } catch (IOException e) {
     // Error configuring sensor
 }
 
 // Unregister and close the driver when finished:
-
 mSensorManager.unregisterListener(mListener);
 mSensorDriver.unregisterTemperatureSensor();
 mSensorDriver.unregisterPressureSensor();
