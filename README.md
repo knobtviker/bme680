@@ -11,7 +11,7 @@ How to use the driver
 ### Gradle dependency
 
 To use the `bme680` driver, simply add the line below to your project's `build.gradle`,
-where `<version>` matches the last version of the driver available on [jcenter](https://bintray.com/bintray/jcenter?filterByPkgName=bme680) .
+where `<version>` matches the last version of the driver available on [jcenter](https://bintray.com/knobtviker/maven/bme680) .
 
 ```
 dependencies {
