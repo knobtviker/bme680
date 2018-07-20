@@ -1,0 +1,16 @@
+{
+    "title": "BME680",
+    "category": "temperature, pressure, and environmental sensor",
+    "published-maven": {
+        "maven-url": "https://jitpack.io",
+        "groupid": "com.github.knobtviker",
+        "artifactid": "bme680"
+    },
+    "compatible-with": [
+        {
+            "title": "Adafruit BME680 Breakout",
+            "url": "https://www.adafruit.com/product/3660",
+            "photo": "https://cdn-shop.adafruit.com/970x728/3660-00.jpg"
+        }
+    ]
+}
