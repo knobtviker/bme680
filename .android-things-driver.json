@@ -1,15 +1,20 @@
 {
     "title": "BME680",
-    "category": "temperature, pressure, and environmental sensor",
+    "category": "temperature, pressure, humidity and air quality sensor",
     "published-maven": {
-        "maven-url": "https://jitpack.io",
-        "groupid": "com.github.knobtviker",
+        "maven-url": "https://dl.bintray.com/knobtviker/maven",
+        "groupid": "com.knobtviker.android.things.contrib.community.driver",
         "artifactid": "bme680"
     },
     "compatible-with": [
         {
             "title": "Adafruit BME680 Breakout",
             "url": "https://www.adafruit.com/product/3660",
+            "photo": "https://cdn-shop.adafruit.com/970x728/3660-00.jpg"
+        },
+        {
+            "title": "Pimoroni BME680 Breakout",
+            "url": "https://cdn.shopify.com/s/files/1/0174/1800/products/BME680_breakout_v2_1_of_3_1024x1024.JPG",
             "photo": "https://cdn-shop.adafruit.com/970x728/3660-00.jpg"
         }
     ]

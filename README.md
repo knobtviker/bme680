@@ -1,5 +1,4 @@
 #Bosch BME680
 Android Things Bosch BME680 drivers.
 
-
-[![Release](https://jitpack.io/v/knobtviker/bme680.svg)](https://jitpack.io/#knobtviker/bme680)
+[ ![Download](https://api.bintray.com/packages/knobtviker/maven/bme680/images/download.svg) ](https://bintray.com/knobtviker/maven/bme680/_latestVersion)
