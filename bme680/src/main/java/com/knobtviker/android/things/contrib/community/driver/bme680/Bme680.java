@@ -459,11 +459,11 @@ public class Bme680 implements AutoCloseable {
         calibration.pressure[0] = concatBytes(mCalibrationArray[BME680_P1_MSB_REGISTER], mCalibrationArray[BME680_P1_LSB_REGISTER], false);
         calibration.pressure[1] = concatBytes(mCalibrationArray[BME680_P2_MSB_REGISTER], mCalibrationArray[BME680_P2_LSB_REGISTER], true);
         calibration.pressure[2] = mCalibrationArray[BME680_P3_REGISTER];
-        calibration.pressure[3] = concatBytes(mCalibrationArray[BME680_P4_MSB_REGISTER], mCalibrationArray[BME680_P4_LSB_REGISTER], false);
+        calibration.pressure[3] = concatBytes(mCalibrationArray[BME680_P4_MSB_REGISTER], mCalibrationArray[BME680_P4_LSB_REGISTER], true);
         calibration.pressure[4] = concatBytes(mCalibrationArray[BME680_P5_MSB_REGISTER], mCalibrationArray[BME680_P5_LSB_REGISTER], true);
         calibration.pressure[5] = mCalibrationArray[BME680_P6_REGISTER];
         calibration.pressure[6] = mCalibrationArray[BME680_P7_REGISTER];
-        calibration.pressure[7] = concatBytes(mCalibrationArray[BME680_P8_MSB_REGISTER], mCalibrationArray[BME680_P8_LSB_REGISTER], false);
+        calibration.pressure[7] = concatBytes(mCalibrationArray[BME680_P8_MSB_REGISTER], mCalibrationArray[BME680_P8_LSB_REGISTER], true);
         calibration.pressure[8] = concatBytes(mCalibrationArray[BME680_P9_MSB_REGISTER], mCalibrationArray[BME680_P9_LSB_REGISTER], true);
         calibration.pressure[9] = mCalibrationArray[BME680_P10_REGISTER] & 0xFF;
 
@@ -855,9 +855,9 @@ public class Bme680 implements AutoCloseable {
 
     private int concatBytes(final int msb, final int lsb, final boolean isSigned) {
         if (isSigned) {
-            return ((msb << 8) | lsb);
+            return (msb << 8) | (lsb & 0xff); // keep the sign of msb but not of lsb
         } else {
-            return (((msb & 0xFF) << 8) | (lsb & 0xFF));
+            return ((msb & 0xff) << 8) | (lsb & 0xff);
         }
     }
 
